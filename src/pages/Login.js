@@ -23,13 +23,15 @@ import api from '../services/api';
 const Login = () => {
     const [phone, setPhone] = useState('');
     const [code, setCode] = useState('');
-    const [step, setStep] = useState(1); // 1 - ввод телефона, 2 - ввод кода
+    const [sessionId, setSessionId] = useState(null);
+    const [step, setStep] = useState(1); // 1 - ввод телефона, 2 - выбор метода, 3 - ввод кода
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
     const toast = useToast();
 
-    const handleSendCode = async () => {
+    // Шаг 1: Начало авторизации
+    const handleStartLogin = async () => {
         if (!phone) {
             setError('Введите номер телефона');
             return;
@@ -39,11 +41,31 @@ const Login = () => {
         setError('');
 
         try {
-            await api.post('/auth/send-code', { phone, method: 'sms' });
+            const response = await api.post('/auth/login/start', { phone });
+            setSessionId(response.data.session_id);
             setStep(2);
+        } catch (err) {
+            setError(err.response?.data?.detail || 'Пользователь не найден');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Шаг 2: Выбор метода получения кода
+    const handleSelectMethod = async (method) => {
+        setLoading(true);
+        setError('');
+
+        try {
+            await api.post('/auth/login/select-method', {
+                session_id: sessionId,
+                method
+            });
+
+            setStep(3);
             toast({
                 title: 'Код отправлен',
-                description: 'Проверьте SMS или Telegram',
+                description: `Код отправлен через ${method === 'sms' ? 'SMS' : 'Telegram'}`,
                 status: 'success',
                 duration: 3000,
                 isClosable: true,
@@ -55,6 +77,7 @@ const Login = () => {
         }
     };
 
+    // Шаг 3: Верификация кода
     const handleVerify = async () => {
         if (!code) {
             setError('Введите код верификации');
@@ -65,7 +88,11 @@ const Login = () => {
         setError('');
 
         try {
-            const response = await api.post('/auth/verify', { phone, code });
+            const response = await api.post('/auth/login/verify', {
+                session_id: sessionId,
+                code
+            });
+
             const { token, role } = response.data;
 
             localStorage.setItem('token', token);
@@ -93,31 +120,18 @@ const Login = () => {
                     navigate('/dashboard/customer');
             }
         } catch (err) {
-            setError(err.response?.data?.detail || 'Ошибка верификации');
+            setError(err.response?.data?.detail || 'Неверный код');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleMethodSelect = async (method) => {
-        setLoading(true);
+    const resetFlow = () => {
+        setStep(1);
+        setPhone('');
+        setCode('');
+        setSessionId(null);
         setError('');
-
-        try {
-            await api.post('/auth/send-code', { phone, method });
-            setStep(2);
-            toast({
-                title: 'Код отправлен',
-                description: `Код отправлен через ${method === 'sms' ? 'SMS' : 'Telegram'}`,
-                status: 'success',
-                duration: 3000,
-                isClosable: true,
-            });
-        } catch (err) {
-            setError(err.response?.data?.detail || 'Ошибка отправки кода');
-        } finally {
-            setLoading(false);
-        }
     };
 
     return (
@@ -133,9 +147,9 @@ const Login = () => {
                 </Alert>
             )}
 
-            {step === 1 ? (
+            {step === 1 && (
                 <VStack spacing={4}>
-                    <FormControl>
+                    <FormControl isRequired>
                         <FormLabel>Номер телефона</FormLabel>
                         <PhoneInput
                             value={phone}
@@ -145,16 +159,20 @@ const Login = () => {
 
                     <Button
                         colorScheme="orange"
-                        onClick={handleSendCode}
+                        onClick={handleStartLogin}
                         isLoading={loading}
                         width="100%"
                     >
-                        Отправить код
+                        Продолжить
                     </Button>
                 </VStack>
-            ) : (
-                <VStack spacing={4}>
-                    <Tabs isFitted variant="enclosed">
+            )}
+
+            {step === 2 && (
+                <VStack spacing={6}>
+                    <Heading size="md">Как получить код?</Heading>
+
+                    <Tabs isFitted variant="enclosed" width="100%">
                         <TabList mb="1em">
                             <Tab>SMS</Tab>
                             <Tab>Telegram</Tab>
@@ -162,7 +180,8 @@ const Login = () => {
                         <TabPanels>
                             <TabPanel>
                                 <Button
-                                    onClick={() => handleMethodSelect('sms')}
+                                    colorScheme="orange"
+                                    onClick={() => handleSelectMethod('sms')}
                                     isLoading={loading}
                                     width="100%"
                                 >
@@ -171,7 +190,8 @@ const Login = () => {
                             </TabPanel>
                             <TabPanel>
                                 <Button
-                                    onClick={() => handleMethodSelect('telegram')}
+                                    colorScheme="orange"
+                                    onClick={() => handleSelectMethod('tg')}
                                     isLoading={loading}
                                     width="100%"
                                 >
@@ -181,13 +201,25 @@ const Login = () => {
                         </TabPanels>
                     </Tabs>
 
-                    <FormControl>
+                    <Button
+                        variant="link"
+                        onClick={resetFlow}
+                    >
+                        Изменить номер
+                    </Button>
+                </VStack>
+            )}
+
+            {step === 3 && (
+                <VStack spacing={4}>
+                    <FormControl isRequired>
                         <FormLabel>Код верификации</FormLabel>
                         <Input
                             type="text"
                             value={code}
                             onChange={(e) => setCode(e.target.value)}
                             placeholder="Введите код"
+                            onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
                         />
                     </FormControl>
 
@@ -202,9 +234,9 @@ const Login = () => {
 
                     <Button
                         variant="link"
-                        onClick={() => setStep(1)}
+                        onClick={() => setStep(2)}
                     >
-                        Изменить номер
+                        Назад
                     </Button>
                 </VStack>
             )}

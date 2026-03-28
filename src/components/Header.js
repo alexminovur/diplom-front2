@@ -51,42 +51,71 @@ const Header = () => {
                     cursor="pointer"
                     onClick={() => navigate('/')}
                 >
-                    🔧 Сервис Ремонта
+                    🔧 Сервис от Лехи  🔧
                 </Heading>
 
                 {isAuthenticated ? (
-                    <Flex alignItems="center" gap={2}>
+                    <Flex alignItems="center" gap={3}>
                         <Button
                             size="sm"
-                            variant="outline"
                             colorScheme="orange"
+                            variant="solid"
                             onClick={() => navigate(getDashboardPath())}
+                            boxShadow="0 2px 4px rgba(0,0,0,0.2)"
+                            _hover={{
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                            }}
+                            transition="all 0.2s"
                         >
                             Личный кабинет
                         </Button>
                         <Button
                             size="sm"
                             colorScheme="red"
-                            variant="outline"
+                            variant="solid"
                             onClick={handleLogout}
+                            boxShadow="0 2px 4px rgba(0,0,0,0.2)"
+                            _hover={{
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                            }}
+                            transition="all 0.2s"
                         >
                             Выйти
                         </Button>
                     </Flex>
                 ) : (
-                    <Flex gap={2}>
+                    <Flex gap={3}>
                         <Button
                             size="sm"
-                            variant="outline"
                             colorScheme="orange"
+                            variant="solid"
                             onClick={() => navigate('/login')}
+                            boxShadow="0 2px 4px rgba(0,0,0,0.2)"
+                            _hover={{
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                            }}
+                            transition="all 0.2s"
+                            fontWeight="medium"
                         >
                             Вход
                         </Button>
                         <Button
                             size="sm"
-                            colorScheme="orange"
+                            colorScheme="yellow"
+                            variant="solid"
+                            borderColor="orange.300"
                             onClick={() => navigate('/register')}
+                            boxShadow="0 2px 4px rgba(0,0,0,0.2)"
+                            _hover={{
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                                bgColor: 'orange.50'
+                            }}
+                            transition="all 0.2s"
+                            fontWeight="medium"
                         >
                             Регистрация
                         </Button>
