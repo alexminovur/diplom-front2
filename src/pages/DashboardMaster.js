@@ -24,7 +24,8 @@ import {
     FormControl,
     FormLabel,
     Textarea,
-    ModalFooter
+    ModalFooter,
+    Spinner
 } from '@chakra-ui/react';
 import api from '../services/api';
 
@@ -34,30 +35,43 @@ const DashboardMaster = () => {
     const [notes, setNotes] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [fetchLoading, setFetchLoading] = useState(true);
     const toast = useToast();
+    const userId = localStorage.getItem('user_id');
 
     useEffect(() => {
         fetchAssignedOrders();
     }, []);
 
     const fetchAssignedOrders = async () => {
+        setFetchLoading(true);
         try {
-            const response = await api.get('/orders/assigned');
-            setOrders(response.data);
+            // Получаем все заказы текущего пользователя
+            const response = await api.get(`/orders/by-user/${userId}`);
+
+            // Если бэкенд не фильтрует по роли, фильтруем на фронте:
+            const masterOrders = response.data.filter(order => order.master_id);
+
+            setOrders(masterOrders);
         } catch (err) {
+            console.error('Error fetching orders:', err);
             toast({
                 title: 'Ошибка загрузки',
-                description: 'Не удалось загрузить список заказов',
-                status: 'error',
+                description: typeof err.response?.data?.detail === 'string'
+                    ? err.response.data.detail
+                    : JSON.stringify(err.response?.data?.detail) || 'Не удалось загрузить список заказов',                status: 'error',
                 duration: 3000,
                 isClosable: true,
             });
+        } finally {
+            setFetchLoading(false);
         }
     };
 
     const handleStartWork = async (orderId) => {
         try {
-            await api.patch(`/orders/${orderId}/start`);
+            // Обновляем статус заказа на "in_progress"
+            const response = await api.put(`/orders/update/${orderId}`, { status: "in_progress" });
             toast({
                 title: 'Успешно',
                 description: 'Работа начата',
@@ -65,11 +79,16 @@ const DashboardMaster = () => {
                 duration: 3000,
                 isClosable: true,
             });
-            fetchAssignedOrders();
+            // Обновляем конкретный заказ в списке
+            setOrders(orders.map(order =>
+                order.id === orderId
+                    ? { ...order, status: "in_progress" }
+                    : order
+            ));
         } catch (err) {
             toast({
                 title: 'Ошибка',
-                description: 'Не удалось начать работу',
+                description: err.response?.data?.detail || 'Не удалось начать работу',
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
@@ -91,7 +110,12 @@ const DashboardMaster = () => {
 
         setLoading(true);
         try {
-            await api.patch(`/orders/${orderId}/complete`, { notes });
+            // Обновляем статус заказа на "completed" и добавляем заметки
+            const response = await api.put(`/orders/update/${orderId}`, {
+                status: "completed",
+                description: notes
+            });
+
             toast({
                 title: 'Успешно',
                 description: 'Работа завершена',
@@ -99,14 +123,21 @@ const DashboardMaster = () => {
                 duration: 3000,
                 isClosable: true,
             });
+
             setIsOpen(false);
             setNotes('');
             setSelectedOrder(null);
-            fetchAssignedOrders();
+
+            // Обновляем конкретный заказ в списке
+            setOrders(orders.map(order =>
+                order.id === orderId
+                    ? { ...order, status: "completed", description: notes }
+                    : order
+            ));
         } catch (err) {
             toast({
                 title: 'Ошибка',
-                description: 'Не удалось завершить работу',
+                description: err.response?.data?.detail || 'Не удалось завершить работу',
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
@@ -126,8 +157,26 @@ const DashboardMaster = () => {
         }
     };
 
+    const getStatusColor = (status) => {
+        switch(status) {
+            case 'new': return 'blue';
+            case 'in_progress': return 'yellow';
+            case 'completed': return 'green';
+            case 'cancelled': return 'red';
+            default: return 'gray';
+        }
+    };
+
+    if (fetchLoading) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+                <Spinner size="xl" />
+            </Box>
+        );
+    }
+
     return (
-        <Box>
+        <Box p={4}>
             <Heading mb={6} color="brand.800">Личный кабинет мастера</Heading>
 
             <Card>
@@ -143,9 +192,11 @@ const DashboardMaster = () => {
                         <Table variant="simple">
                             <Thead>
                                 <Tr>
-                                    <Th>Дата</Th>
-                                    <Th>Устройство</Th>
+                                    <Th>ID</Th>
+                                    <Th>Название</Th>
                                     <Th>Клиент</Th>
+                                    <Th>Устройство</Th>
+                                    <Th>Сложность</Th>
                                     <Th>Статус</Th>
                                     <Th>Действия</Th>
                                 </Tr>
@@ -153,14 +204,25 @@ const DashboardMaster = () => {
                             <Tbody>
                                 {orders.map((order) => (
                                     <Tr key={order.id}>
-                                        <Td>{new Date(order.created_at).toLocaleDateString()}</Td>
-                                        <Td>{order.device_type} {order.brand} {order.model}</Td>
-                                        <Td>{order.customer_name}</Td>
+                                        <Td>{order.id}</Td>
+                                        <Td>{order.title}</Td>
+                                        <Td>
+                                            {order.client_id ? `Клиент #${order.client_id}` : 'Не назначен'}
+                                        </Td>
+                                        <Td>
+                                            {order.device_id ? `Устройство #${order.device_id}` : 'Не указано'}
+                                        </Td>
                                         <Td>
                                             <Badge colorScheme={
-                                                order.status === 'new' ? 'blue' :
-                                                    order.status === 'in_progress' ? 'yellow' : 'green'
+                                                order.difficult === 'high' ? 'red' :
+                                                    order.difficult === 'medium' ? 'yellow' :
+                                                        order.difficult === 'low' ? 'green' : 'gray'
                                             }>
+                                                {order.difficult || 'unknown'}
+                                            </Badge>
+                                        </Td>
+                                        <Td>
+                                            <Badge colorScheme={getStatusColor(order.status)}>
                                                 {getStatusText(order.status)}
                                             </Badge>
                                         </Td>
@@ -181,6 +243,7 @@ const DashboardMaster = () => {
                                                     colorScheme="blue"
                                                     onClick={() => {
                                                         setSelectedOrder(order);
+                                                        setNotes(order.description || '');
                                                         setIsOpen(true);
                                                     }}
                                                 >
@@ -197,7 +260,7 @@ const DashboardMaster = () => {
             </Card>
 
             {/* Modal для завершения работы */}
-            <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
+            <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} size="xl">
                 <ModalOverlay />
                 <ModalContent>
                     <ModalHeader>Завершение работы</ModalHeader>
@@ -205,13 +268,16 @@ const DashboardMaster = () => {
                     <ModalBody>
                         {selectedOrder && (
                             <>
-                                <Text mb={4}>
-                                    <strong>Устройство:</strong> {selectedOrder.device_type} {selectedOrder.brand} {selectedOrder.model}
+                                <Text mb={2}>
+                                    <strong>ID заказа:</strong> {selectedOrder.id}
+                                </Text>
+                                <Text mb={2}>
+                                    <strong>Название:</strong> {selectedOrder.title}
                                 </Text>
                                 <Text mb={4}>
-                                    <strong>Проблема:</strong> {selectedOrder.problem}
+                                    <strong>Описание:</strong> {selectedOrder.description || 'Нет описания'}
                                 </Text>
-                                <FormControl>
+                                <FormControl mt={4}>
                                     <FormLabel>Заметки о проделанной работе</FormLabel>
                                     <Textarea
                                         value={notes}

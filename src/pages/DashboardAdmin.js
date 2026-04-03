@@ -22,35 +22,72 @@ import {
     ModalCloseButton,
     FormControl,
     FormLabel,
-    ModalFooter
+    ModalFooter,
+    Flex,
+    Tabs,
+    TabList,
+    TabPanels,
+    Tab,
+    TabPanel,
+    Text,
+    Badge,
+    Spinner
 } from '@chakra-ui/react';
 import api from '../services/api';
 import { ROLES, ROLE_TITLES } from '../utils/roles';
 
 const DashboardAdmin = () => {
+    const [activeTab, setActiveTab] = useState(0);
     const [users, setUsers] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [masters, setMasters] = useState([]);
+    const [managers, setManagers] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
     const [newRole, setNewRole] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [fetchLoading, setFetchLoading] = useState(true);
     const toast = useToast();
 
     useEffect(() => {
-        fetchUsers();
-    }, []);
+        fetchData();
+    }, [activeTab]);
 
-    const fetchUsers = async () => {
+    const fetchData = async () => {
+        setFetchLoading(true);
         try {
-            const response = await api.get('/users');
-            setUsers(response.data);
+            switch(activeTab) {
+                case 0: // Пользователи
+                    const usersResponse = await api.get('/users');
+                    setUsers(usersResponse.data);
+                    break;
+                case 1: // Заказы
+                    const ordersResponse = await api.get('/orders');
+                    setOrders(ordersResponse.data);
+                    break;
+                case 2: // Мастера
+                    const mastersResponse = await api.get('/users');
+                    const masterUsers = mastersResponse.data.filter(user => user.role === 'master');
+                    setMasters(masterUsers);
+                    break;
+                case 3: // Менеджеры
+                    const managersResponse = await api.get('/users');
+                    const managerUsers = managersResponse.data.filter(user => user.role === 'manager');
+                    setManagers(managerUsers);
+                    break;
+                default:
+                    break;
+            }
         } catch (err) {
             toast({
                 title: 'Ошибка загрузки',
-                description: 'Не удалось загрузить список пользователей',
+                description: err.response?.data?.detail || 'Не удалось загрузить данные',
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
             });
+        } finally {
+            setFetchLoading(false);
         }
     };
 
@@ -68,7 +105,7 @@ const DashboardAdmin = () => {
 
         setLoading(true);
         try {
-            await api.patch(`/users/${selectedUser.id}/role`, { role: newRole });
+            await api.put(`/users/${selectedUser.id}`, { role: newRole });
             toast({
                 title: 'Успешно',
                 description: 'Роль пользователя изменена',
@@ -79,11 +116,11 @@ const DashboardAdmin = () => {
             setIsOpen(false);
             setSelectedUser(null);
             setNewRole('');
-            fetchUsers();
+            fetchData();
         } catch (err) {
             toast({
                 title: 'Ошибка',
-                description: 'Не удалось изменить роль',
+                description: err.response?.data?.detail || 'Не удалось изменить роль',
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
@@ -93,57 +130,269 @@ const DashboardAdmin = () => {
         }
     };
 
-    return (
-        <Box>
-            <Heading mb={6} color="brand.800">Панель администратора</Heading>
+    const getStatusText = (status) => {
+        switch(status) {
+            case 'new': return 'Новый';
+            case 'in_progress': return 'В работе';
+            case 'completed': return 'Завершен';
+            case 'cancelled': return 'Отменен';
+            default: return status;
+        }
+    };
 
-            <Card>
-                <CardHeader>
-                    <Heading size="md">Управление пользователями</Heading>
-                </CardHeader>
-                <CardBody>
-                    {users.length === 0 ? (
-                        <Box textAlign="center" py={8} color="gray.500">
-                            Нет пользователей
-                        </Box>
-                    ) : (
-                        <Table variant="simple">
-                            <Thead>
-                                <Tr>
-                                    <Th>Имя</Th>
-                                    <Th>Телефон</Th>
-                                    <Th>Роль</Th>
-                                    <Th>Дата регистрации</Th>
-                                    <Th>Действия</Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {users.map((user) => (
-                                    <Tr key={user.id}>
-                                        <Td>{user.name}</Td>
-                                        <Td>{user.phone}</Td>
-                                        <Td>{ROLE_TITLES[user.role] || user.role}</Td>
-                                        <Td>{new Date(user.created_at).toLocaleDateString()}</Td>
-                                        <Td>
-                                            <Button
-                                                size="sm"
-                                                colorScheme="orange"
-                                                onClick={() => {
-                                                    setSelectedUser(user);
-                                                    setNewRole(user.role);
-                                                    setIsOpen(true);
-                                                }}
-                                            >
-                                                Изменить роль
-                                            </Button>
-                                        </Td>
-                                    </Tr>
-                                ))}
-                            </Tbody>
-                        </Table>
-                    )}
-                </CardBody>
-            </Card>
+    const getStatusColor = (status) => {
+        switch(status) {
+            case 'new': return 'blue';
+            case 'in_progress': return 'yellow';
+            case 'completed': return 'green';
+            case 'cancelled': return 'red';
+            default: return 'gray';
+        }
+    };
+
+    if (fetchLoading) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+                <Spinner size="xl" />
+            </Box>
+        );
+    }
+
+    return (
+        <Flex>
+            {/* Боковое меню */}
+            <Box w="250px" p={4} borderRight="1px" borderColor="gray.200">
+                <Heading size="md" mb={6} color="brand.800">Админ-панель</Heading>
+                <Tabs orientation="vertical" variant="filled" index={activeTab} onChange={(index) => setActiveTab(index)}>
+                    <TabList>
+                        <Tab justifyContent="flex-start" mb={2}>
+                            📋 Все пользователи
+                        </Tab>
+                        <Tab justifyContent="flex-start" mb={2}>
+                            🛠️ Все заказы
+                        </Tab>
+                        <Tab justifyContent="flex-start" mb={2}>
+                            🔧 Мастера
+                        </Tab>
+                        <Tab justifyContent="flex-start" mb={2}>
+                            👨‍💼 Менеджеры
+                        </Tab>
+                    </TabList>
+                </Tabs>
+            </Box>
+
+            {/* Основной контент - ОБЕРНУЛ В Tabs */}
+            <Tabs index={activeTab} onChange={setActiveTab} style={{ flex: 1 }}>
+                <Box p={6}>
+                    <TabPanels>
+                        {/* Все пользователи */}
+                        <TabPanel>
+                            <Heading mb={6} color="brand.800">Все пользователи</Heading>
+                            <Card>
+                                <CardHeader>
+                                    <Heading size="md">Список пользователей</Heading>
+                                </CardHeader>
+                                <CardBody>
+                                    {users.length === 0 ? (
+                                        <Text textAlign="center" py={8} color="gray.500">
+                                            Нет пользователей
+                                        </Text>
+                                    ) : (
+                                        <Table variant="simple">
+                                            <Thead>
+                                                <Tr>
+                                                    <Th>Имя</Th>
+                                                    <Th>Телефон</Th>
+                                                    <Th>Роль</Th>
+                                                    <Th>Дата регистрации</Th>
+                                                    <Th>Действия</Th>
+                                                </Tr>
+                                            </Thead>
+                                            <Tbody>
+                                                {users.map((user) => (
+                                                    <Tr key={user.id}>
+                                                        <Td>{user.name}</Td>
+                                                        <Td>{user.phone}</Td>
+                                                        <Td>
+                                                            <Badge colorScheme={
+                                                                user.role === 'admin' ? 'purple' :
+                                                                    user.role === 'manager' ? 'blue' :
+                                                                        user.role === 'master' ? 'green' : 'gray'
+                                                            }>
+                                                                {ROLE_TITLES[user.role] || user.role}
+                                                            </Badge>
+                                                        </Td>
+                                                        <Td>{new Date(user.created_at).toLocaleDateString()}</Td>
+                                                        <Td>
+                                                            <Button
+                                                                size="sm"
+                                                                colorScheme="orange"
+                                                                onClick={() => {
+                                                                    setSelectedUser(user);
+                                                                    setNewRole(user.role);
+                                                                    setIsOpen(true);
+                                                                }}
+                                                            >
+                                                                Изменить роль
+                                                            </Button>
+                                                        </Td>
+                                                    </Tr>
+                                                ))}
+                                            </Tbody>
+                                        </Table>
+                                    )}
+                                </CardBody>
+                            </Card>
+                        </TabPanel>
+
+                        {/* Все заказы */}
+                        <TabPanel>
+                            <Heading mb={6} color="brand.800">Все заказы</Heading>
+                            <Card>
+                                <CardHeader>
+                                    <Heading size="md">Список заказов</Heading>
+                                </CardHeader>
+                                <CardBody>
+                                    {orders.length === 0 ? (
+                                        <Text textAlign="center" py={8} color="gray.500">
+                                            Нет заказов
+                                        </Text>
+                                    ) : (
+                                        <Table variant="simple">
+                                            <Thead>
+                                                <Tr>
+                                                    <Th>ID</Th>
+                                                    <Th>Название</Th>
+                                                    <Th>Клиент</Th>
+                                                    <Th>Мастер</Th>
+                                                    <Th>Статус</Th>
+                                                    <Th>Дата создания</Th>
+                                                </Tr>
+                                            </Thead>
+                                            <Tbody>
+                                                {orders.map((order) => (
+                                                    <Tr key={order.id}>
+                                                        <Td>{order.id}</Td>
+                                                        <Td>{order.title}</Td>
+                                                        <Td>{order.client_id ? `#${order.client_id}` : 'Не назначен'}</Td>
+                                                        <Td>{order.master_id ? `#${order.master_id}` : 'Не назначен'}</Td>
+                                                        <Td>
+                                                            <Badge colorScheme={getStatusColor(order.status)}>
+                                                                {getStatusText(order.status)}
+                                                            </Badge>
+                                                        </Td>
+                                                        <Td>{new Date(order.created_at).toLocaleDateString()}</Td>
+                                                    </Tr>
+                                                ))}
+                                            </Tbody>
+                                        </Table>
+                                    )}
+                                </CardBody>
+                            </Card>
+                        </TabPanel>
+
+                        {/* Мастера */}
+                        <TabPanel>
+                            <Heading mb={6} color="brand.800">Мастера</Heading>
+                            <Card>
+                                <CardHeader>
+                                    <Heading size="md">Список мастеров</Heading>
+                                </CardHeader>
+                                <CardBody>
+                                    {masters.length === 0 ? (
+                                        <Text textAlign="center" py={8} color="gray.500">
+                                            Нет мастеров
+                                        </Text>
+                                    ) : (
+                                        <Table variant="simple">
+                                            <Thead>
+                                                <Tr>
+                                                    <Th>Имя</Th>
+                                                    <Th>Телефон</Th>
+                                                    <Th>Дата регистрации</Th>
+                                                    <Th>Действия</Th>
+                                                </Tr>
+                                            </Thead>
+                                            <Tbody>
+                                                {masters.map((master) => (
+                                                    <Tr key={master.id}>
+                                                        <Td>{master.name}</Td>
+                                                        <Td>{master.phone}</Td>
+                                                        <Td>{new Date(master.created_at).toLocaleDateString()}</Td>
+                                                        <Td>
+                                                            <Button
+                                                                size="sm"
+                                                                colorScheme="orange"
+                                                                onClick={() => {
+                                                                    setSelectedUser(master);
+                                                                    setNewRole(master.role);
+                                                                    setIsOpen(true);
+                                                                }}
+                                                            >
+                                                                Изменить роль
+                                                            </Button>
+                                                        </Td>
+                                                    </Tr>
+                                                ))}
+                                            </Tbody>
+                                        </Table>
+                                    )}
+                                </CardBody>
+                            </Card>
+                        </TabPanel>
+
+                        {/* Менеджеры */}
+                        <TabPanel>
+                            <Heading mb={6} color="brand.800">Менеджеры</Heading>
+                            <Card>
+                                <CardHeader>
+                                    <Heading size="md">Список менеджеров</Heading>
+                                </CardHeader>
+                                <CardBody>
+                                    {managers.length === 0 ? (
+                                        <Text textAlign="center" py={8} color="gray.500">
+                                            Нет менеджеров
+                                        </Text>
+                                    ) : (
+                                        <Table variant="simple">
+                                            <Thead>
+                                                <Tr>
+                                                    <Th>Имя</Th>
+                                                    <Th>Телефон</Th>
+                                                    <Th>Дата регистрации</Th>
+                                                    <Th>Действия</Th>
+                                                </Tr>
+                                            </Thead>
+                                            <Tbody>
+                                                {managers.map((manager) => (
+                                                    <Tr key={manager.id}>
+                                                        <Td>{manager.name}</Td>
+                                                        <Td>{manager.phone}</Td>
+                                                        <Td>{new Date(manager.created_at).toLocaleDateString()}</Td>
+                                                        <Td>
+                                                            <Button
+                                                                size="sm"
+                                                                colorScheme="orange"
+                                                                onClick={() => {
+                                                                    setSelectedUser(manager);
+                                                                    setNewRole(manager.role);
+                                                                    setIsOpen(true);
+                                                                }}
+                                                            >
+                                                                Изменить роль
+                                                            </Button>
+                                                        </Td>
+                                                    </Tr>
+                                                ))}
+                                            </Tbody>
+                                        </Table>
+                                    )}
+                                </CardBody>
+                            </Card>
+                        </TabPanel>
+                    </TabPanels>
+                </Box>
+            </Tabs>
 
             {/* Modal для изменения роли */}
             <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
@@ -154,9 +403,9 @@ const DashboardAdmin = () => {
                     <ModalBody>
                         {selectedUser && (
                             <>
-                                <p><strong>Имя:</strong> {selectedUser.name}</p>
-                                <p><strong>Телефон:</strong> {selectedUser.phone}</p>
-                                <FormControl mt={4}>
+                                <Text mb={2}><strong>Имя:</strong> {selectedUser.name}</Text>
+                                <Text mb={4}><strong>Телефон:</strong> {selectedUser.phone}</Text>
+                                <FormControl>
                                     <FormLabel>Новая роль</FormLabel>
                                     <Select
                                         value={newRole}
@@ -188,7 +437,7 @@ const DashboardAdmin = () => {
                     </ModalFooter>
                 </ModalContent>
             </Modal>
-        </Box>
+        </Flex>
     );
 };
 

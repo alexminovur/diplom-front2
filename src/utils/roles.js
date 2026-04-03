@@ -2,14 +2,14 @@ export const ROLES = {
     ADMIN: 'admin',
     MANAGER: 'manager',
     MASTER: 'master',
-    CUSTOMER: 'customer'
+    CLIENT: 'client'
 };
 
 export const ROLE_TITLES = {
     [ROLES.ADMIN]: 'Администратор',
     [ROLES.MANAGER]: 'Менеджер',
     [ROLES.MASTER]: 'Мастер',
-    [ROLES.CUSTOMER]: 'Заказчик'
+    [ROLES.CLIENT]: 'Клиент'
 };
 
 export const hasRole = (userRole, requiredRole) => {

@@ -6,7 +6,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import DashboardCustomer from './pages/DashboardCustomer';
+import DashboardClient from './pages/DashboardClient';
 import DashboardMaster from './pages/DashboardMaster';
 import DashboardManager from './pages/DashboardManager';
 import DashboardAdmin from './pages/DashboardAdmin';
@@ -28,11 +28,11 @@ function App() {
 
                         {/* Защищенные роуты */}
                         <Route
-                            path="/dashboard/customer"
+                            path="/dashboard/client"
                             element={
                                 <ProtectedRoute>
-                                    <RoleGuard allowedRoles={[ROLES.CUSTOMER]}>
-                                        <DashboardCustomer />
+                                    <RoleGuard allowedRoles={[ROLES.CLIENT]}>
+                                        <DashboardClient />
                                     </RoleGuard>
                                 </ProtectedRoute>
                             }

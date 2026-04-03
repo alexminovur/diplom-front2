@@ -67,7 +67,7 @@ const Register = () => {
 
             <form onSubmit={handleSubmit}>
                 <VStack spacing={4}>
-                    <FormControl isRequired>
+                    <FormControl>
                         <FormLabel>Имя</FormLabel>
                         <Input
                             type="text"
@@ -77,18 +77,13 @@ const Register = () => {
                         />
                     </FormControl>
 
-                    <FormControl isRequired>
+                    <FormControl>
                         <FormLabel>Номер телефона</FormLabel>
                         <PhoneInput
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                         />
                     </FormControl>
-
-                    <Text fontSize="sm" color="gray.500" textAlign="center">
-                        После регистрации вы получите роль "Заказчик".
-                        Администратор сможет изменить вашу роль при необходимости.
-                    </Text>
 
                     <Button
                         colorScheme="orange"

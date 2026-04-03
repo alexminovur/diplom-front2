@@ -38,7 +38,7 @@ const Header = () => {
             case 'admin': return '/dashboard/admin';
             case 'manager': return '/dashboard/manager';
             case 'master': return '/dashboard/master';
-            case 'customer': return '/dashboard/customer';
+            case 'client': return '/dashboard/client';
             default: return '/';
         }
     };

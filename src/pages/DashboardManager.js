@@ -24,23 +24,49 @@ import {
     ModalCloseButton,
     FormControl,
     FormLabel,
-    ModalFooter
+    ModalFooter,
+    Spinner
 } from '@chakra-ui/react';
 import api from '../services/api';
 
 const DashboardManager = () => {
     const [orders, setOrders] = useState([]);
-    const [masters, setMasters] = useState([]);
+    const [masters, setMasters] = useState([]); // 🔥 Добавлено
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [selectedMaster, setSelectedMaster] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [fetchLoading, setFetchLoading] = useState(true);
     const toast = useToast();
 
     useEffect(() => {
-        fetchOrders();
-        fetchMasters();
+        fetchData(); // 🔥 Загружаем и заказы, и мастеров
     }, []);
+
+    const fetchData = async () => {
+        setFetchLoading(true);
+        try {
+            // Загружаем заказы
+            const ordersResponse = await api.get('/orders');
+            setOrders(ordersResponse.data);
+
+            // Загружаем мастеров
+            const mastersResponse = await api.get('/users'); // или отдельный endpoint
+            const masterUsers = mastersResponse.data.filter(user => user.role === 'master');
+            setMasters(masterUsers);
+
+        } catch (err) {
+            toast({
+                title: 'Ошибка загрузки',
+                description: err.response?.data?.detail || 'Не удалось загрузить данные',
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+        } finally {
+            setFetchLoading(false);
+        }
+    };
 
     const fetchOrders = async () => {
         try {
@@ -59,8 +85,9 @@ const DashboardManager = () => {
 
     const fetchMasters = async () => {
         try {
-            const response = await api.get('/users/masters');
-            setMasters(response.data);
+            const response = await api.get('/users'); // или специальный endpoint для мастеров
+            const masterUsers = response.data.filter(user => user.role === 'master');
+            setMasters(masterUsers);
         } catch (err) {
             toast({
                 title: 'Ошибка загрузки',
@@ -97,11 +124,11 @@ const DashboardManager = () => {
             setIsOpen(false);
             setSelectedOrder(null);
             setSelectedMaster('');
-            fetchOrders();
+            fetchOrders(); // Обновляем список заказов
         } catch (err) {
             toast({
                 title: 'Ошибка',
-                description: 'Не удалось назначить мастера',
+                description: err.response?.data?.detail || 'Не удалось назначить мастера',
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
@@ -120,6 +147,14 @@ const DashboardManager = () => {
             default: return status;
         }
     };
+
+    if (fetchLoading) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+                <Spinner size="xl" />
+            </Box>
+        );
+    }
 
     return (
         <Box>
@@ -151,7 +186,7 @@ const DashboardManager = () => {
                                     <Tr key={order.id}>
                                         <Td>{new Date(order.created_at).toLocaleDateString()}</Td>
                                         <Td>{order.device_type} {order.brand} {order.model}</Td>
-                                        <Td>{order.customer_name}</Td>
+                                        <Td>{order.client_id ? `Клиент #${order.client_id}` : 'Не назначен'}</Td>
                                         <Td>
                                             <Badge colorScheme={
                                                 order.status === 'new' ? 'blue' :
@@ -161,7 +196,10 @@ const DashboardManager = () => {
                                             </Badge>
                                         </Td>
                                         <Td>
-                                            {order.master_name || 'Не назначен'}
+                                            {order.master_id ?
+                                                `Мастер #${order.master_id}` :
+                                                'Не назначен'
+                                            }
                                         </Td>
                                         <Td>
                                             {(order.status === 'new' || order.status === 'pending') && (
@@ -198,18 +236,19 @@ const DashboardManager = () => {
                                     <strong>Устройство:</strong> {selectedOrder.device_type} {selectedOrder.brand} {selectedOrder.model}
                                 </Text>
                                 <Text mb={4}>
-                                    <strong>Проблема:</strong> {selectedOrder.problem}
+                                    <strong>Проблема:</strong> {selectedOrder.description || 'Не указана'}
                                 </Text>
                                 <FormControl>
                                     <FormLabel>Выберите мастера</FormLabel>
                                     <Select
                                         value={selectedMaster}
                                         onChange={(e) => setSelectedMaster(e.target.value)}
+                                        placeholder="Выберите мастера"
                                     >
-                                        <option value="">Выберите мастера</option>
+                                        {/* 🔥 Здесь отображаются мастера */}
                                         {masters.map(master => (
                                             <option key={master.id} value={master.id}>
-                                                {master.name} ({master.orders_count || 0} активных заказов)
+                                                {master.name} {/* или master.first_name + master.last_name */}
                                             </option>
                                         ))}
                                     </Select>

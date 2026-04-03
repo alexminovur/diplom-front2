@@ -93,10 +93,13 @@ const Login = () => {
                 code
             });
 
-            const { token, role } = response.data;
+            const { access_token, user_id, name, role } = response.data;
 
-            localStorage.setItem('token', token);
+            localStorage.setItem('token', access_token);
             localStorage.setItem('role', role);
+            localStorage.setItem('user_id', user_id.toString());
+            localStorage.setItem('user_name', name);
+
 
             toast({
                 title: 'Успешный вход',
@@ -117,7 +120,7 @@ const Login = () => {
                     navigate('/dashboard/master');
                     break;
                 default:
-                    navigate('/dashboard/customer');
+                    navigate('/dashboard/client');
             }
         } catch (err) {
             setError(err.response?.data?.detail || 'Неверный код');
@@ -149,7 +152,7 @@ const Login = () => {
 
             {step === 1 && (
                 <VStack spacing={4}>
-                    <FormControl isRequired>
+                    <FormControl>
                         <FormLabel>Номер телефона</FormLabel>
                         <PhoneInput
                             value={phone}
@@ -212,7 +215,7 @@ const Login = () => {
 
             {step === 3 && (
                 <VStack spacing={4}>
-                    <FormControl isRequired>
+                    <FormControl>
                         <FormLabel>Код верификации</FormLabel>
                         <Input
                             type="text"
