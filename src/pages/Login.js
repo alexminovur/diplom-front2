@@ -9,31 +9,35 @@ import {
     Alert,
     AlertIcon,
     VStack,
-    Tabs,
-    TabList,
-    TabPanels,
-    Tab,
-    TabPanel,
-    useToast
+    Text,
+    useToast,
+    Link,
+    Flex
 } from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom';
-import PhoneInput from '../components/PhoneInput';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import api from '../services/api';
 
 const Login = () => {
-    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
-    const [sessionId, setSessionId] = useState(null);
-    const [step, setStep] = useState(1); // 1 - ввод телефона, 2 - выбор метода, 3 - ввод кода
+    const [step, setStep] = useState(1); // 1 - ввод email, 2 - ввод кода
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [sessionId, setSessionId] = useState(null);
     const navigate = useNavigate();
     const toast = useToast();
 
-    // Шаг 1: Начало авторизации
-    const handleStartLogin = async () => {
-        if (!phone) {
-            setError('Введите номер телефона');
+    const handleStartLogin = async (e) => {
+        e.preventDefault();
+
+        if (!email) {
+            setError('Введите email');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError('Введите корректный email');
             return;
         }
 
@@ -41,9 +45,17 @@ const Login = () => {
         setError('');
 
         try {
-            const response = await api.post('/auth/login/start', { phone });
+            const response = await api.post('/auth/login/start', { email });
             setSessionId(response.data.session_id);
             setStep(2);
+
+            toast({
+                title: 'Код отправлен',
+                description: 'Проверьте ваш email',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
         } catch (err) {
             setError(err.response?.data?.detail || 'Пользователь не найден');
         } finally {
@@ -51,34 +63,9 @@ const Login = () => {
         }
     };
 
-    // Шаг 2: Выбор метода получения кода
-    const handleSelectMethod = async (method) => {
-        setLoading(true);
-        setError('');
+    const handleVerify = async (e) => {
+        e.preventDefault();
 
-        try {
-            await api.post('/auth/login/select-method', {
-                session_id: sessionId,
-                method
-            });
-
-            setStep(3);
-            toast({
-                title: 'Код отправлен',
-                description: `Код отправлен через ${method === 'sms' ? 'SMS' : 'Telegram'}`,
-                status: 'success',
-                duration: 3000,
-                isClosable: true,
-            });
-        } catch (err) {
-            setError(err.response?.data?.detail || 'Ошибка отправки кода');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Шаг 3: Верификация кода
-    const handleVerify = async () => {
         if (!code) {
             setError('Введите код верификации');
             return;
@@ -93,13 +80,10 @@ const Login = () => {
                 code
             });
 
-            const { access_token, user_id, name, role } = response.data;
+            const { access_token, role } = response.data;
 
             localStorage.setItem('token', access_token);
             localStorage.setItem('role', role);
-            localStorage.setItem('user_id', user_id.toString());
-            localStorage.setItem('user_name', name);
-
 
             toast({
                 title: 'Успешный вход',
@@ -131,7 +115,7 @@ const Login = () => {
 
     const resetFlow = () => {
         setStep(1);
-        setPhone('');
+        setEmail('');
         setCode('');
         setSessionId(null);
         setError('');
@@ -151,97 +135,88 @@ const Login = () => {
             )}
 
             {step === 1 && (
-                <VStack spacing={4}>
-                    <FormControl>
-                        <FormLabel>Номер телефона</FormLabel>
-                        <PhoneInput
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                        />
-                    </FormControl>
+                <form onSubmit={handleStartLogin}>
+                    <VStack spacing={4}>
+                        <FormControl isRequired>
+                            <FormLabel>Email</FormLabel>
+                            <Input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="your@email.com"
+                            />
+                        </FormControl>
 
-                    <Button
-                        colorScheme="orange"
-                        onClick={handleStartLogin}
-                        isLoading={loading}
-                        width="100%"
-                    >
-                        Продолжить
-                    </Button>
-                </VStack>
+                        <Button
+                            colorScheme="orange"
+                            type="submit"
+                            isLoading={loading}
+                            width="100%"
+                            size="lg"
+                        >
+                            Продолжить
+                        </Button>
+
+                        <Text fontSize="sm" color="gray.500">
+                            Нет аккаунта?{' '}
+                            <Link as={RouterLink} to="/register" color="orange.500">
+                                Зарегистрируйтесь
+                            </Link>
+                        </Text>
+                    </VStack>
+                </form>
             )}
 
             {step === 2 && (
-                <VStack spacing={6}>
-                    <Heading size="md">Как получить код?</Heading>
+                <form onSubmit={handleVerify}>
+                    <VStack spacing={4}>
+                        <Heading size="md" textAlign="center">
+                            Введите код подтверждения
+                        </Heading>
 
-                    <Tabs isFitted variant="enclosed" width="100%">
-                        <TabList mb="1em">
-                            <Tab>SMS</Tab>
-                            <Tab>Telegram</Tab>
-                        </TabList>
-                        <TabPanels>
-                            <TabPanel>
-                                <Button
-                                    colorScheme="orange"
-                                    onClick={() => handleSelectMethod('sms')}
-                                    isLoading={loading}
-                                    width="100%"
-                                >
-                                    Отправить код по SMS
-                                </Button>
-                            </TabPanel>
-                            <TabPanel>
-                                <Button
-                                    colorScheme="orange"
-                                    onClick={() => handleSelectMethod('tg')}
-                                    isLoading={loading}
-                                    width="100%"
-                                >
-                                    Отправить код в Telegram
-                                </Button>
-                            </TabPanel>
-                        </TabPanels>
-                    </Tabs>
+                        <Text textAlign="center" color="gray.600">
+                            Мы отправили код на {email}. Введите его ниже:
+                        </Text>
 
-                    <Button
-                        variant="link"
-                        onClick={resetFlow}
-                    >
-                        Изменить номер
-                    </Button>
-                </VStack>
-            )}
+                        <FormControl isRequired>
+                            <FormLabel>Код подтверждения</FormLabel>
+                            <Input
+                                type="text"
+                                value={code}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                                    setCode(value);
+                                }}
+                                placeholder="Введите 6-значный код"
+                                maxLength={6}
+                                size="lg"
+                                textAlign="center"
+                                fontSize="xl"
+                                letterSpacing="wider"
+                            />
+                        </FormControl>
 
-            {step === 3 && (
-                <VStack spacing={4}>
-                    <FormControl>
-                        <FormLabel>Код верификации</FormLabel>
-                        <Input
-                            type="text"
-                            value={code}
-                            onChange={(e) => setCode(e.target.value)}
-                            placeholder="Введите код"
-                            onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
-                        />
-                    </FormControl>
+                        <Button
+                            colorScheme="orange"
+                            type="submit"
+                            isLoading={loading}
+                            width="100%"
+                            size="lg"
+                        >
+                            Подтвердить
+                        </Button>
 
-                    <Button
-                        colorScheme="orange"
-                        onClick={handleVerify}
-                        isLoading={loading}
-                        width="100%"
-                    >
-                        Подтвердить
-                    </Button>
-
-                    <Button
-                        variant="link"
-                        onClick={() => setStep(2)}
-                    >
-                        Назад
-                    </Button>
-                </VStack>
+                        <Flex justifyContent="space-between" width="100%">
+                            <Button
+                                variant="link"
+                                onClick={resetFlow}
+                                color="gray.500"
+                            >
+                                Изменить email
+                            </Button>
+                        </Flex>
+                    </VStack>
+                </form>
             )}
         </Box>
     );

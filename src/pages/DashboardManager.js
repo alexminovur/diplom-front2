@@ -85,7 +85,7 @@ const DashboardManager = () => {
 
     const fetchMasters = async () => {
         try {
-            const response = await api.get('/users'); // или специальный endpoint для мастеров
+            const response = await api.get('/users');
             const masterUsers = response.data.filter(user => user.role === 'master');
             setMasters(masterUsers);
         } catch (err) {
@@ -113,7 +113,10 @@ const DashboardManager = () => {
 
         setLoading(true);
         try {
-            await api.patch(`/orders/${selectedOrder.id}/assign`, { master_id: selectedMaster });
+            await api.put(`/orders/update/${selectedOrder.id}`, {
+                master_id: parseInt(selectedMaster) // Преобразуем в число
+            });
+
             toast({
                 title: 'Успешно',
                 description: 'Мастер назначен',
@@ -137,6 +140,7 @@ const DashboardManager = () => {
             setLoading(false);
         }
     };
+
 
     const getStatusText = (status) => {
         switch(status) {
