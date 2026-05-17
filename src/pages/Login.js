@@ -80,8 +80,8 @@ const Login = () => {
                 code
             });
 
-            const { access_token, role } = response.data;
-
+            const { user_id, access_token, role } = response.data;
+            localStorage.setItem('user_id', user_id);
             localStorage.setItem('token', access_token);
             localStorage.setItem('role', role);
 
