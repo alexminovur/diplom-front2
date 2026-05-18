@@ -66,6 +66,8 @@ const Login = () => {
     const handleVerify = async (e) => {
         e.preventDefault();
 
+        console.log('=== handleVerify START ===');
+
         if (!code) {
             setError('Введите код верификации');
             return;
@@ -75,15 +77,25 @@ const Login = () => {
         setError('');
 
         try {
+            console.log('Making /verify request...');
             const response = await api.post('/auth/login/verify', {
                 session_id: sessionId,
                 code
             });
 
+            console.log('✅ /verify SUCCESS, response:', response.data);
+
             const { user_id, access_token, role } = response.data;
+            console.log('Writing to localStorage:', { user_id, access_token, role });
             localStorage.setItem('user_id', user_id);
             localStorage.setItem('token', access_token);
             localStorage.setItem('role', role);
+
+            console.log('✅ localStorage after set:', {
+                user_id: localStorage.getItem('user_id'),
+                token: localStorage.getItem('token'),
+                role: localStorage.getItem('role'),
+            });
 
             toast({
                 title: 'Успешный вход',
@@ -92,6 +104,7 @@ const Login = () => {
                 isClosable: true,
             });
 
+            console.log('Navigating to dashboard, role:', role);
             // Перенаправляем на соответствующий дашборд
             switch(role) {
                 case 'admin':
@@ -106,10 +119,14 @@ const Login = () => {
                 default:
                     navigate('/dashboard/client');
             }
+            console.log('=== handleVerify COMPLETE ===');
         } catch (err) {
+            console.error('❌ /verify FAILED:', err);
+            console.error('Error response:', err.response?.data);
             setError(err.response?.data?.detail || 'Неверный код');
         } finally {
             setLoading(false);
+            console.log('=== handleVerify FINALLY ===');
         }
     };
 
