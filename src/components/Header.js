@@ -51,7 +51,7 @@ const Header = () => {
                     cursor="pointer"
                     onClick={() => navigate('/')}
                 >
-                    🔧 Сервис от Лехи  🔧
+                    🔧 Ремонт техники  🔧
                 </Heading>
 
                 {isAuthenticated ? (

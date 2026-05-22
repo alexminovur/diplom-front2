@@ -29,3 +29,8 @@ root.render(
         </ChakraProvider>
     </React.StrictMode>
 );
+// root.render(
+//     <ChakraProvider theme={theme}>
+//         <App />
+//     </ChakraProvider>
+// );
