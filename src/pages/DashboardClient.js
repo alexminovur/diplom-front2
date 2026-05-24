@@ -207,41 +207,61 @@ const DashboardClient = () => {
     };
 
     const getStatusColor = (status) => {
-        switch(status) {
-            case 'new': return 'blue';
-            case 'in_progress': return 'yellow';
-            case 'completed': return 'green';
-            case 'cancelled': return 'red';
-            default: return 'gray';
-        }
+        const map = {
+            'new': 'blue',
+            'diagnostics': 'cyan',
+            'on_diagnostics': 'cyan',
+            'awaiting_approval': 'orange',
+            'awaiting_parts': 'purple',
+            'in_repair': 'yellow',
+            'ready_for_pickup': 'teal',
+            'in_progress': 'yellow',
+            'completed': 'green',
+            'cancelled': 'red',
+        };
+        return map[status] || 'gray';
     };
 
     const getStatusText = (status) => {
-        switch(status) {
-            case 'new': return 'Новый';
-            case 'in_progress': return 'В работе';
-            case 'completed': return 'Завершен';
-            case 'cancelled': return 'Отменен';
-            default: return status;
-        }
+        const map = {
+            'new': 'Новый',
+            'diagnostics': 'На диагностике',
+            'on_diagnostics': 'На диагностике',
+            'awaiting_approval': 'Ожидает согласования',
+            'awaiting_parts': 'Ожидает запчастей',
+            'in_repair': 'В ремонте',
+            'ready_for_pickup': 'Готов / ожидает выдачи',
+            'in_progress': 'В работе',
+            'completed': 'Завершён',
+            'cancelled': 'Отменён',
+        };
+        return map[status] || status;
     };
 
     const getDifficultColor = (difficult) => {
-        switch(difficult) {
-            case 'high': return 'red';
-            case 'medium': return 'yellow';
-            case 'low': return 'green';
-            default: return 'gray';
-        }
+        const map = {
+            'high': 'red',
+            'medium': 'yellow',
+            'low': 'green',
+            'unknown': 'gray',
+            'normal': 'yellow',
+            'service': 'blue',
+            'not_repair': 'red',
+        };
+        return map[difficult] || 'gray';
     };
 
     const getDifficultText = (difficult) => {
-        switch(difficult) {
-            case 'high': return 'Высокая';
-            case 'medium': return 'Средняя';
-            case 'low': return 'Низкая';
-            default: return 'Не указана';
-        }
+        const map = {
+            'high': 'Высокая',
+            'medium': 'Средняя',
+            'low': 'Низкая',
+            'unknown': 'Неизвестно',
+            'normal': 'Обычный ремонт',
+            'service': 'Тех. обслуживание',
+            'not_repair': 'Ремонт нецелесообразен',
+        };
+        return map[difficult] || 'Не указана';
     };
 
     if (fetchLoading) {

@@ -143,13 +143,19 @@ const DashboardManager = () => {
 
 
     const getStatusText = (status) => {
-        switch(status) {
-            case 'new': return 'Новый';
-            case 'in_progress': return 'В работе';
-            case 'completed': return 'Завершен';
-            case 'cancelled': return 'Отменен';
-            default: return status;
-        }
+        const map = {
+            'new': 'Новый',
+            'diagnostics': 'На диагностике',
+            'on_diagnostics': 'На диагностике',
+            'awaiting_approval': 'Ожидает согласования',
+            'awaiting_parts': 'Ожидает запчастей',
+            'in_repair': 'В ремонте',
+            'ready_for_pickup': 'Готов / ожидает выдачи',
+            'in_progress': 'В работе',
+            'completed': 'Завершён',
+            'cancelled': 'Отменён',
+        };
+        return map[status] || status;
     };
 
     if (fetchLoading) {
