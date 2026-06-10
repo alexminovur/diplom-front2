@@ -10,6 +10,7 @@ import DashboardClient from './pages/DashboardClient';
 import DashboardMaster from './pages/DashboardMaster';
 import DashboardManager from './pages/DashboardManager';
 import DashboardAdmin from './pages/DashboardAdmin';
+import Reports from './pages/Reports';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleGuard from './components/RoleGuard';
@@ -63,6 +64,16 @@ function App() {
                                 <ProtectedRoute>
                                     <RoleGuard allowedRoles={[ROLES.ADMIN]}>
                                         <DashboardAdmin />
+                                    </RoleGuard>
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/reports"
+                            element={
+                                <ProtectedRoute>
+                                    <RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.MANAGER]}>
+                                        <Reports />
                                     </RoleGuard>
                                 </ProtectedRoute>
                             }

@@ -33,10 +33,12 @@ import {
     Badge,
     Spinner
 } from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { ROLES, ROLE_TITLES } from '../utils/roles';
 
 const DashboardAdmin = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState(0);
     const [users, setUsers] = useState([]);
     const [orders, setOrders] = useState([]);
@@ -131,23 +133,35 @@ const DashboardAdmin = () => {
     };
 
     const getStatusText = (status) => {
-        switch(status) {
-            case 'new': return 'Новый';
-            case 'in_progress': return 'В работе';
-            case 'completed': return 'Завершен';
-            case 'cancelled': return 'Отменен';
-            default: return status;
-        }
+        const map = {
+            'new': 'Новый',
+            'diagnostics': 'На диагностике',
+            'on_diagnostics': 'На диагностике',
+            'awaiting_approval': 'Ожидает согласования',
+            'awaiting_parts': 'Ожидает запчастей',
+            'in_repair': 'В ремонте',
+            'ready_for_pickup': 'Готов / ожидает выдачи',
+            'in_progress': 'В работе',
+            'completed': 'Завершён',
+            'cancelled': 'Отменён',
+        };
+        return map[status] || status;
     };
 
     const getStatusColor = (status) => {
-        switch(status) {
-            case 'new': return 'blue';
-            case 'in_progress': return 'yellow';
-            case 'completed': return 'green';
-            case 'cancelled': return 'red';
-            default: return 'gray';
-        }
+        const map = {
+            'new': 'blue',
+            'diagnostics': 'cyan',
+            'on_diagnostics': 'cyan',
+            'awaiting_approval': 'orange',
+            'awaiting_parts': 'purple',
+            'in_repair': 'yellow',
+            'ready_for_pickup': 'teal',
+            'in_progress': 'yellow',
+            'completed': 'green',
+            'cancelled': 'red',
+        };
+        return map[status] || 'gray';
     };
 
     if (fetchLoading) {
@@ -179,11 +193,26 @@ const DashboardAdmin = () => {
                         </Tab>
                     </TabList>
                 </Tabs>
+
+                <Button
+                    mt={6}
+                    width="100%"
+                    colorScheme="blue"
+                    onClick={() => navigate('/reports')}
+                >
+                    📊 Отчетность
+                </Button>
             </Box>
 
             {/* Основной контент - ОБЕРНУЛ В Tabs */}
             <Tabs index={activeTab} onChange={setActiveTab} style={{ flex: 1 }}>
                 <Box p={6}>
+                    <Flex justify="space-between" align="center" mb={4} gap={4} wrap="wrap">
+                        <Text color="gray.600">Разделы администрирования и управление системой</Text>
+                        <Button colorScheme="blue" variant="outline" onClick={() => navigate('/reports')}>
+                            Перейти в отчетность
+                        </Button>
+                    </Flex>
                     <TabPanels>
                         {/* Все пользователи */}
                         <TabPanel>
