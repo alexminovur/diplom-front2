@@ -43,6 +43,8 @@ const Header = () => {
         }
     };
 
+    const canSeeReports = userRole === 'admin' || userRole === 'manager';
+
     return (
         <Box bg="brand.700" color="white" p={4} boxShadow="md">
             <Flex justifyContent="space-between" alignItems="center">
@@ -56,6 +58,22 @@ const Header = () => {
 
                 {isAuthenticated ? (
                     <Flex alignItems="center" gap={3}>
+                        {canSeeReports && (
+                            <Button
+                                size="sm"
+                                colorScheme="blue"
+                                variant="solid"
+                                onClick={() => navigate('/reports')}
+                                boxShadow="0 2px 4px rgba(0,0,0,0.2)"
+                                _hover={{
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                                }}
+                                transition="all 0.2s"
+                            >
+                                Отчетность
+                            </Button>
+                        )}
                         <Button
                             size="sm"
                             colorScheme="orange"

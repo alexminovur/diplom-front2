@@ -25,13 +25,17 @@ import {
     FormControl,
     FormLabel,
     ModalFooter,
-    Spinner
+    Spinner,
+    Flex,
 } from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const DashboardManager = () => {
+    const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [masters, setMasters] = useState([]); // 🔥 Добавлено
+    const [usersMap, setUsersMap] = useState({}); // карта всех пользователей по id
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [selectedMaster, setSelectedMaster] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -50,9 +54,15 @@ const DashboardManager = () => {
             const ordersResponse = await api.get('/orders');
             setOrders(ordersResponse.data);
 
-            // Загружаем мастеров
-            const mastersResponse = await api.get('/users'); // или отдельный endpoint
-            const masterUsers = mastersResponse.data.filter(user => user.role === 'master');
+            // Загружаем пользователей (и выделяем мастеров)
+            const usersResponse = await api.get('/users'); // или отдельный endpoint
+            const users = usersResponse.data || [];
+            // Построим карту пользователей по id для быстрого поиска имени
+            const map = {};
+            users.forEach(u => { map[u.id] = u; });
+            setUsersMap(map);
+
+            const masterUsers = users.filter(user => user.role === 'master');
             setMasters(masterUsers);
 
         } catch (err) {
@@ -168,7 +178,12 @@ const DashboardManager = () => {
 
     return (
         <Box>
-            <Heading mb={6} color="brand.800">Личный кабинет менеджера</Heading>
+            <Flex justify="space-between" align="center" gap={4} wrap="wrap" mb={4}>
+                <Heading color="brand.800">Личный кабинет менеджера</Heading>
+                <Button colorScheme="blue" onClick={() => navigate('/reports')}>
+                    📊 Отчетность
+                </Button>
+            </Flex>
 
             <Card>
                 <CardHeader>
@@ -196,7 +211,13 @@ const DashboardManager = () => {
                                     <Tr key={order.id}>
                                         <Td>{new Date(order.created_at).toLocaleDateString()}</Td>
                                         <Td>{order.device_type} {order.brand} {order.model}</Td>
-                                        <Td>{order.client_id ? `Клиент #${order.client_id}` : 'Не назначен'}</Td>
+                                        <Td>
+                                            {order.client_id ? (
+                                                usersMap[order.client_id]
+                                                    ? (usersMap[order.client_id].name || ((usersMap[order.client_id].first_name || '') + ' ' + (usersMap[order.client_id].last_name || '')).trim())
+                                                    : `Клиент #${order.client_id}`
+                                            ) : 'Не назначен'}
+                                        </Td>
                                         <Td>
                                             <Badge colorScheme={
                                                 order.status === 'new' ? 'blue' :
@@ -206,10 +227,11 @@ const DashboardManager = () => {
                                             </Badge>
                                         </Td>
                                         <Td>
-                                            {order.master_id ?
-                                                `Мастер #${order.master_id}` :
-                                                'Не назначен'
-                                            }
+                                            {order.master_id ? (
+                                                usersMap[order.master_id]
+                                                    ? (usersMap[order.master_id].name || ((usersMap[order.master_id].first_name || '') + ' ' + (usersMap[order.master_id].last_name || '')).trim())
+                                                    : `Мастер #${order.master_id}`
+                                            ) : 'Не назначен'}
                                         </Td>
                                         <Td>
                                             {(order.status === 'new' || order.status === 'pending') && (

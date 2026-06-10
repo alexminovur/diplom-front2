@@ -23,6 +23,7 @@ import {
     ModalCloseButton,
     FormControl,
     FormLabel,
+    Input,
     Textarea,
     Select,
     ModalFooter,
@@ -45,6 +46,7 @@ const DashboardMaster = () => {
     const [complexityModalOpen, setComplexityModalOpen] = useState(false);
     const [complexityOrder, setComplexityOrder] = useState(null);
     const [complexityValue, setComplexityValue] = useState('unknown');
+    const [totalPrice, setTotalPrice] = useState('');
     const [problemText, setProblemText] = useState('');
     const [complexitySaving, setComplexitySaving] = useState(false);
     const toast = useToast();
@@ -211,6 +213,7 @@ const DashboardMaster = () => {
         if (order.status === 'diagnostics' || order.status === 'on_diagnostics') {
             setComplexityOrder(order);
             setComplexityValue(order.difficult || 'unknown');
+            setTotalPrice(order.total_price ?? '');
             setProblemText(order.problem || '');
             setComplexityModalOpen(true);
             return;
@@ -344,6 +347,18 @@ const DashboardMaster = () => {
             return;
         }
 
+        const parsedPrice = Number(String(totalPrice).replace(',', '.').trim());
+        if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+            toast({
+                title: 'Ошибка',
+                description: 'Укажите корректную цену',
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
         setComplexitySaving(true);
         try {
             const submittedProblem = problemText.trim();
@@ -351,7 +366,7 @@ const DashboardMaster = () => {
                 complexityOrder.id,
                 nextStatus,
                 `Статус изменен: ${getStatusText(nextStatus)}`,
-                { difficult: complexityValue, problem: submittedProblem }
+                { difficult: complexityValue, problem: submittedProblem, total_price: parsedPrice }
             );
 
             const refreshedOrders = await fetchAssignedOrders();
@@ -369,6 +384,7 @@ const DashboardMaster = () => {
             setComplexityModalOpen(false);
             setComplexityOrder(null);
             setComplexityValue('unknown');
+            setTotalPrice('');
             setProblemText('');
         } catch (err) {
             toast({
@@ -617,6 +633,7 @@ const DashboardMaster = () => {
                     setComplexityModalOpen(false);
                     setComplexityOrder(null);
                     setComplexityValue('unknown');
+                    setTotalPrice('');
                     setProblemText('');
                 }}
             >
@@ -638,6 +655,17 @@ const DashboardMaster = () => {
                                         <option value="service">Тех. обслуживание</option>
                                         <option value="not_repair">Ремонт нецелесообразен</option>
                                     </Select>
+                                </FormControl>
+                                <FormControl mt={4} isRequired>
+                                    <FormLabel>Цена</FormLabel>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={totalPrice}
+                                        onChange={(e) => setTotalPrice(e.target.value)}
+                                        placeholder="Введите цену..."
+                                    />
                                 </FormControl>
                                 <FormControl mt={4} isRequired>
                                     <FormLabel>Описание проблемы</FormLabel>

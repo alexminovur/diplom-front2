@@ -33,10 +33,12 @@ import {
     Badge,
     Spinner
 } from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { ROLES, ROLE_TITLES } from '../utils/roles';
 
 const DashboardAdmin = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState(0);
     const [users, setUsers] = useState([]);
     const [orders, setOrders] = useState([]);
@@ -191,11 +193,26 @@ const DashboardAdmin = () => {
                         </Tab>
                     </TabList>
                 </Tabs>
+
+                <Button
+                    mt={6}
+                    width="100%"
+                    colorScheme="blue"
+                    onClick={() => navigate('/reports')}
+                >
+                    📊 Отчетность
+                </Button>
             </Box>
 
             {/* Основной контент - ОБЕРНУЛ В Tabs */}
             <Tabs index={activeTab} onChange={setActiveTab} style={{ flex: 1 }}>
                 <Box p={6}>
+                    <Flex justify="space-between" align="center" mb={4} gap={4} wrap="wrap">
+                        <Text color="gray.600">Разделы администрирования и управление системой</Text>
+                        <Button colorScheme="blue" variant="outline" onClick={() => navigate('/reports')}>
+                            Перейти в отчетность
+                        </Button>
+                    </Flex>
                     <TabPanels>
                         {/* Все пользователи */}
                         <TabPanel>
